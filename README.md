@@ -11,5 +11,3 @@ Plug the Arduino into laptop USB sensor
 Click the rightward arrow (which uploads the program to the Arduino to run). You may need to select the port (it should be the USB port)
 
 To view the output, click the magnifying glass icon in the upper righthand corner. It will display a serial monitor
-
-test edit
