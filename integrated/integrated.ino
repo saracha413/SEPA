@@ -10,7 +10,7 @@
 #include <SD.h>
 
 
-//data logging from https://makersportal.com/blog/2019/3/24/arduino-sd-card-module-data-logger
+//data logging from https://makersportal.com/blog/2019/3/24/arduino-sd-card-module-data-logger (currently this logs an increasing integer, not data)
 
 //what to write data to
 File testfile;
@@ -47,8 +47,6 @@ int soilmoisturepercent=0;
 //            humidity sensor
 //==========================================
 DHT dht(DHTPIN, DHTTYPE);
-
-
 
 
 
@@ -102,104 +100,107 @@ void setup() {
   }
 }
 
+
+
 void loop() {
 
   
-  // send request to receive data starting at register 0
-  Wire.beginTransmission(0x68); // 0x68 is DS3231 device address
-  Wire.write((byte)0); // start at register 0
-  Wire.endTransmission();
-  Wire.requestFrom(0x68, 3); // request three bytes (seconds, minutes, hours)
+  testfile = SD.open(fileName, FILE_WRITE); //file to write data to
 
-    while(Wire.available())  { 
-
-      int seconds = Wire.read(); // get seconds
-      int minutes = Wire.read(); // get minutes
-      int hours = Wire.read();   // get hours
-   
-      seconds = (((seconds & 0b11110000)>>4)*10 + (seconds & 0b00001111)); // convert BCD to decimal
-      minutes = (((minutes & 0b11110000)>>4)*10 + (minutes & 0b00001111)); // convert BCD to decimal
-      hours = (((hours & 0b00100000)>>5)*20 + ((hours & 0b00010000)>>4)*10 + (hours & 0b00001111)); // convert BCD to decimal (assume 24 hour mode)
-   
-      Serial.print(hours); Serial.print(":"); Serial.print(minutes); Serial.print(":"); Serial.println(seconds);
-
-    
-      //==========================================
-      //           temperature sensors
-      //==========================================
-      
-      sensors1.requestTemperatures(); 
-      Celcius1=sensors1.getTempCByIndex(0);
-      Fahrenheit1=sensors1.toFahrenheit(Celcius1);
-      //Serial.print(" C  ");
-      //Serial.print(Celcius);
-      Serial.print(" Sensor 1");
-      Serial.print(" F  ");
-      Serial.println(Fahrenheit1);
-    
-      //==========================================
-      //           moisture sensor
-      //==========================================
+  if (testfile) {
+    testfile.println(String(millis()));
   
-      soilMoistureValue = analogRead(A0);  //put Sensor insert into soil
-      //Serial.println(soilMoistureValue);
-      soilmoisturepercent = map(soilMoistureValue, AirValue, WaterValue, 0, 100);
-      if(soilmoisturepercent >= 100){
-        Serial.println("100 %");
-       }
-      else if(soilmoisturepercent <=0)  {
-        Serial.println("0 %");
-        }
-      else if(soilmoisturepercent >0 && soilmoisturepercent < 100) {
-        Serial.print(soilmoisturepercent);
-        Serial.println("%");
-    
-        }
+    // send request to receive data starting at register 0
+    Wire.beginTransmission(0x68); // 0x68 is DS3231 device address
+    Wire.write((byte)0); // start at register 0
+    Wire.endTransmission();
+    Wire.requestFrom(0x68, 3); // request three bytes (seconds, minutes, hours)
+  
+      while(Wire.available())  { 
+  
+        int seconds = Wire.read(); // get seconds
+        int minutes = Wire.read(); // get minutes
+        int hours = Wire.read();   // get hours
+     
+        seconds = (((seconds & 0b11110000)>>4)*10 + (seconds & 0b00001111)); // convert BCD to decimal
+        minutes = (((minutes & 0b11110000)>>4)*10 + (minutes & 0b00001111)); // convert BCD to decimal
+        hours = (((hours & 0b00100000)>>5)*20 + ((hours & 0b00010000)>>4)*10 + (hours & 0b00001111)); // convert BCD to decimal (assume 24 hour mode)
+     
+        //Serial.print(hours); Serial.print(":"); Serial.print(minutes); Serial.print(":"); Serial.println(seconds);
+        testfile.print(hours); testfile.print(":"); testfile.print(minutes); testfile.print(":"); testfile.println(seconds);
+      
+        //==========================================
+        //           temperature sensors
+        //==========================================
         
-      //==========================================
-      //           humidity sensor
-      //==========================================
+        sensors1.requestTemperatures(); 
+        Celcius1=sensors1.getTempCByIndex(0);
+        Fahrenheit1=sensors1.toFahrenheit(Celcius1);
+        //Serial.print(" C  ");
+        //Serial.print(Celcius);
+        testfile.println("Sensor 1: "+String(Fahrenheit1)+" F");
+      
+        //==========================================
+        //           moisture sensor
+        //==========================================
+    
+        soilMoistureValue = analogRead(A0);  //put Sensor insert into soil
+        //Serial.println(soilMoistureValue);
+        soilmoisturepercent = map(soilMoistureValue, AirValue, WaterValue, 0, 100);
+        if(soilmoisturepercent >= 100){
+          testfile.print("Soil moisture is 100 %");
+         }
+        else if(soilmoisturepercent <=0)  {
+          testfile.print("Soil moisture is 0 %");
+          }
+        else if(soilmoisturepercent >0 && soilmoisturepercent < 100) {
+          testfile.print("Soil moisture is " + String(soilmoisturepercent)+"%");
+      
+          }
+          
+        //==========================================
+        //           humidity sensor
+        //==========================================
+  
+          // Reading temperature or humidity takes about 250 milliseconds!
+          // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
+          float h = dht.readHumidity();
+          // Read temperature as Celsius (the default)
+          float t = dht.readTemperature();
+          // Read temperature as Fahrenheit (isFahrenheit = true)
+          float f = dht.readTemperature(true);
+        
+          // Check if any reads failed and exit early (to try again).
+          if (isnan(h) || isnan(t) || isnan(f)) {
+            Serial.println(F("Failed to read from DHT sensor!"));
+            testfile.print(F("Failed to read from DHT sensor!"));
+            return;
+          }
+        
+          // Compute heat index in Fahrenheit (the default)
+          float hif = dht.computeHeatIndex(f, h);
+          // Compute heat index in Celsius (isFahreheit = false)
+          float hic = dht.computeHeatIndex(t, h, false);
 
-        // Reading temperature or humidity takes about 250 milliseconds!
-        // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-        float h = dht.readHumidity();
-        // Read temperature as Celsius (the default)
-        float t = dht.readTemperature();
-        // Read temperature as Fahrenheit (isFahrenheit = true)
-        float f = dht.readTemperature(true);
-      
-        // Check if any reads failed and exit early (to try again).
-        if (isnan(h) || isnan(t) || isnan(f)) {
-          Serial.println(F("Failed to read from DHT sensor!"));
-          return;
-        }
-      
-        // Compute heat index in Fahrenheit (the default)
-        float hif = dht.computeHeatIndex(f, h);
-        // Compute heat index in Celsius (isFahreheit = false)
-        float hic = dht.computeHeatIndex(t, h, false);
-      
-        Serial.print(F("Humidity: "));
-        Serial.print(h);
-        Serial.print(F("%  Temperature: "));
-        Serial.print(t);
-        Serial.print(F("°C "));
-        Serial.print(f);
-        Serial.print(F("°F  Heat index: "));
-        Serial.print(hic);
-        Serial.print(F("°C "));
-        Serial.print(hif);
-        Serial.println(F("°F"));
 
+          testfile.println("Humidity: "+String(h)+ "%  Temperature: "+String(t)+"°C ");
+        
+          //Serial.print(F("Humidity: "));
+          //Serial.print(h);
+          //Serial.print(F("%  Temperature: "));
+          //Serial.print(t);
+          //Serial.print(F("°C "));
+          //Serial.print(f);
+          //Serial.print(F("°F  Heat index: "));
+          //Serial.print(hic);
+          //Serial.print(F("°C "));
+          //Serial.print(hif);
+          //Serial.println(F("°F"));
+  
+        
+      }
       
-    }
-    // save new integer every loop
-      testfile = SD.open(fileName, FILE_WRITE);
-      if (testfile) {
-        // save a different number each loop
-        testfile.println(String(millis())+","+String(int_iter));
-        testfile.close();
-        Serial.println("Saving "+String(int_iter));
+      testfile.close();
       } else {
         Serial.println("error opening file");
       }
