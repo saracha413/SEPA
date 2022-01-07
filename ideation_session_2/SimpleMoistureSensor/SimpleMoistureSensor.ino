@@ -31,10 +31,10 @@ void loop(void)
   // These lines convert analog voltage reading into moisture %
   soilMoisturePercent = map(soilMoistureValue, AirValue, WaterValue, 0, 100);
   if(soilMoisturePercent >= 100){
-    soilMoisturePercent = 100
+    soilMoisturePercent = 100;
     }
   else if(soilMoisturePercent<0){
-    soilMoisturePercent = 0
+    soilMoisturePercent = 0;
   }
 
   // These lines format the text with the measurement that will go to the computer.
