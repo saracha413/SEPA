@@ -4,7 +4,7 @@
   Turns an LED on for one second, then off for one second, repeatedly.
 
   This example code is in the public domain.
-
+  Adapted from:
   http://www.arduino.cc/en/Tutorial/Blink
 */
 
@@ -21,7 +21,10 @@ void setup() {
 // the loop function runs over and over again forever
 void loop() {
   digitalWrite(ledPin, HIGH);   // turn the LED on (HIGH is the voltage level)
-  delay(1000);                       // wait for a second
+  // The number after delay is how many milliseconds the microcontroller should
+  // wait for before going to the next step. Try changing it to something else
+  // for example: 'delay(100);'
+  delay(1000);                       // wait
   digitalWrite(ledPin, LOW);    // turn the LED off by making the voltage LOW
-  delay(1000);                       // wait for a second
+  delay(1000);                       // wait
 }
