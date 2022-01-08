@@ -1,5 +1,8 @@
-/* Simple Moisture Sensor */
+/* Moisture and TSL2591 */
 
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include "Adafruit_TSL2591.h"
 
 // Example for demonstrating the reading data from a moisture sensor
 
@@ -16,17 +19,42 @@ const int WaterValue = 310;
 int soilMoistureValue = 0;
 int soilMoisturePercent=0;
 
+// Variable that we'll use for the light sensor
+Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
+
 // Code in the setup block will be run once when the program starts (or device is powered up)
 void setup(void) 
 {
   // Serial is the connection between the microcontroller and the computer. 
   // This line is needed to send text from the microcontroller to the computer.
   Serial.begin(9600);
+  
+  // This section turns on the light sensor, and notifies user if it cannot find the sensor.
+  if (tsl.begin()) 
+  {
+    Serial.println(F("Found a TSL2591 sensor"));} 
+  else 
+  {
+    Serial.println(F("No sensor found ... check your wiring?"));
+    while (1);
+  }
+
+  // Configure the sensor, these settings can be changed...
+  tsl.setGain(TSL2591_GAIN_MED);      // 25x gain
+  tsl.setTiming(TSL2591_INTEGRATIONTIME_300MS);
 }
 
 // Code in the loop block is run repeatedly until the device is powered off 
 void loop(void) 
 { 
+  // This line collects a light measurement and stores it as the variable 'x'
+  uint16_t x = tsl.getLuminosity(TSL2591_VISIBLE);
+  
+  // These lines format the text with the measurement that will go to the computer.
+  String measName = "Luminosity (lux), ";
+  String trailingComma = ", ";
+  String output = measName + x + trailingComma;
+
   // This measures the voltage from our soil moisture sensor
   soilMoistureValue = analogRead(MOISPIN);
   
@@ -42,7 +70,9 @@ void loop(void)
   // These lines format the text with the measurement that will go to the computer.
   String measName = "Soil Moisture (%), ";
   String trailingComma = ", ";
-  String output = measName + soilMoisturePercent + trailingComma;
+  // Compare with above, the output string has already been created
+  // (in line 56). Now we are just adding the additional measurement to it
+  output = output + measName + soilMoisturePercent + trailingComma;
   
   // This line sends the text with the measurement to the computer.
   Serial.println(output);
