@@ -1,3 +1,6 @@
+//libraries to include 
+//go to Sketch -> Include Libraries then select the library to include it
+//if you don't see the library you're looking for, you can install it by clicking "Manage Libraries"
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include "DHT.h"
@@ -14,20 +17,23 @@
 
 //what to write data to
 File testfile;
-String fileName = "test.csv";
+//name the file to write data to (here it's "test.csv")
+//.csv stands for "comma separated values" and is the file type you should use
+String fileName = "test.csv"; 
 //setup the data logger
 volatile int int_iter = 0;
 
-//pins
-#define ONE_WIRE_BUS1 6 //temp sensor 1
-#define DHTPIN 3 //humidity sensor
-#define DHTTYPE DHT11 //humidity sensor
+//introduce sensors
+#define ONE_WIRE_BUS1 6 //temp sensor at pin 6
+#define DHTPIN 3 //humidity-temperature ("DHT") sensor at pin 3
+#define DHTTYPE DHT11 //the type of DHT sensor is DHT11
 
 //==========================================
 //           temperature sensor
 //==========================================
-OneWire oneWire1(ONE_WIRE_BUS1);
 
+//ask installed libraries to set up temperature sensor
+OneWire oneWire1(ONE_WIRE_BUS1);
 DallasTemperature sensors1(&oneWire1);
 
 float Celcius1=0;
@@ -37,7 +43,11 @@ float Fahrenheit1=0;
 //==========================================
 //            moisture sensor
 //==========================================
+// Variables that we'll use in moisture sensor
+// This value could be calibrated by reading sensor in air
 const int AirValue = 620;   
+// This value could be calibrated by reading sensor in water
+// DO NOT SUBMERGE ELECTRONIC COMPONENTS, JUST END OF THE PROBE   
 const int WaterValue = 310; 
 int soilMoistureValue = 0;
 int soilmoisturepercent=0;
@@ -49,6 +59,15 @@ int soilmoisturepercent=0;
 DHT dht(DHTPIN, DHTTYPE);
 
 
+//=========================================
+//*****************************************
+//
+// The setup block is where you set up your 
+// sensors to begin measurements.
+//
+//*****************************************
+//=========================================
+
 
 void setup() {
 
@@ -59,20 +78,23 @@ void setup() {
     
   Wire.begin();
 
-  Serial.begin(9600);
-  sensors1.begin();
-
-  Wire.beginTransmission(0x68);
-  Wire.write(0x0E); 
+  Serial.begin(9600); //have Serial monitor begin reading data
+  sensors1.begin(); //have temperature sensor begin reading data
+ 
+  Wire.beginTransmission(0x68); //0x68 is the temperature sesnor device address
+  //assign a specific "register" (chunk of memory in the microcontroller) to the temperature sensor
+  Wire.write(0x0E);
+  //write a byte of information to the temperature sensor
   Wire.write(0b00011100); 
+  //end the transmission to the temperature sensor
   Wire.endTransmission();
 
   //==========================================
   //            humidity sensor
   //==========================================  
-  Serial.println(F("DHTxx test!"));
+  Serial.println(F("DHTxx test!")); //test that humidity-temperature sensor is working
 
-  dht.begin();
+  dht.begin(); //humidity-temperature sensor begins reading data
 
 
   //==========================================
@@ -80,8 +102,9 @@ void setup() {
   //==========================================  
   // wait for SD module to start
   if (!SD.begin(4)) {
+    //if computer cannot find SD module, print that module wasn't detected
     Serial.println("No SD Module Detected");
-    while (1);
+    while (1); //while this condition is true, take no other action
   }
   // see if test file exists, delete it if it does
   // then prints headers and starts new one
@@ -100,14 +123,24 @@ void setup() {
   }
 }
 
-
+//=========================================
+//*****************************************
+//
+// The loop block is where the action that
+// the microcontroller should take goes. 
+// This action is run over and over in a 
+// loop.
+//
+//*****************************************
+//=========================================
 
 void loop() {
 
   
-  testfile = SD.open(fileName, FILE_WRITE); //file to write data to
+  testfile = SD.open(fileName, FILE_WRITE); //file to write data
 
   if (testfile) {
+    //print time (number of milliseconds since Arduino began running program)
     testfile.println(String(millis()));
   
     // send request to receive data starting at register 0
@@ -139,22 +172,25 @@ void loop() {
         //Serial.print(" C  ");
         //Serial.print(Celcius);
         testfile.println("Sensor 1: "+String(Fahrenheit1)+" F");
+        Serial.println("Temperature sensor: "+String(Fahrenheit1)+" F");
       
         //==========================================
         //           moisture sensor
         //==========================================
     
-        soilMoistureValue = analogRead(A0);  //put Sensor insert into soil
-        //Serial.println(soilMoistureValue);
+        soilMoistureValue = analogRead(A0);  //ask sensor to read soil moisture value
         soilmoisturepercent = map(soilMoistureValue, AirValue, WaterValue, 0, 100);
         if(soilmoisturepercent >= 100){
           testfile.print("Soil moisture is 100 %");
+          Serial.print("Soil moisture is 100 %");
          }
         else if(soilmoisturepercent <=0)  {
           testfile.print("Soil moisture is 0 %");
+          Serial.print("Soil moisture is 0 %");
           }
         else if(soilmoisturepercent >0 && soilmoisturepercent < 100) {
           testfile.print("Soil moisture is " + String(soilmoisturepercent)+"%");
+          Serial.print("Soil moisture is " + String(soilmoisturepercent)+"%");
       
           }
           
@@ -164,7 +200,8 @@ void loop() {
   
           // Reading temperature or humidity takes about 250 milliseconds!
           // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-          float h = dht.readHumidity();
+          
+          float h = dht.readHumidity(); //read humidity, h, from sensor
           // Read temperature as Celsius (the default)
           float t = dht.readTemperature();
           // Read temperature as Fahrenheit (isFahrenheit = true)
@@ -184,30 +221,19 @@ void loop() {
 
 
           testfile.println("Humidity: "+String(h)+ "%  Temperature: "+String(t)+"°C ");
-        
-          //Serial.print(F("Humidity: "));
-          //Serial.print(h);
-          //Serial.print(F("%  Temperature: "));
-          //Serial.print(t);
-          //Serial.print(F("°C "));
-          //Serial.print(f);
-          //Serial.print(F("°F  Heat index: "));
-          //Serial.print(hic);
-          //Serial.print(F("°C "));
-          //Serial.print(hif);
-          //Serial.println(F("°F"));
+          Serial.println("Humidity: "+String(h)+ "%  Temperature: "+String(t)+"°C ");
   
         
       }
       
-      testfile.close();
+      testfile.close(); //close and save file you've been writing to
+      
       } else {
         Serial.println("error opening file");
       }
-      int_iter+=1;
-
+      int_iter+=1; //increase number of times loop has been run
       
-    delay(2000);
+    delay(2000); //wait 2s before beginning loop again
   
 
 }
