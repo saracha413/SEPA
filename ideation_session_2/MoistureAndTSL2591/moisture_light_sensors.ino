@@ -1,28 +1,37 @@
-/* Moisture and TSL2591 */
+/* Moisture and Light Sensing */
 
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
-#include "Adafruit_TSL2591.h"
+#include "Adafruit_TSL2591.h" //for light sensor
 
 // Example for demonstrating the reading data from a moisture sensor
 
 
 // Define pins
-#define MOISPIN A0 // moisture sensor is plugged into A0
+#define MOISPIN A0 // moisture sensor should be plugged into analog pin 0 (A0)
 
-// Variables that we'll use in moisture sensor
+
+
+// Moisture Sensor Variables //
+
 // This value could be calibrated by reading sensor in air
 const int AirValue = 620;
+
 // This value could be calibrated by reading sensor in water
 // DO NOT SUBMERGE ELECTRONIC COMPONENTS, JUST END OF THE PROBE   
 const int WaterValue = 310; 
+
 int soilMoistureValue = 0;
 int soilMoisturePercent=0;
 
-// Variable that we'll use for the light sensor
+
+
+// Light Sensor Variables //
+
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // pass in a number for the sensor identifier (for your use later)
 
 // Code in the setup block will be run once when the program starts (or device is powered up)
+
 void setup(void) 
 {
   // Serial is the connection between the microcontroller and the computer. 
@@ -32,7 +41,7 @@ void setup(void)
   // This section turns on the light sensor, and notifies user if it cannot find the sensor.
   if (tsl.begin()) 
   {
-    Serial.println(F("Found a TSL2591 sensor"));} 
+    Serial.println(F("Found a light sensor"));} 
   else 
   {
     Serial.println(F("No sensor found ... check your wiring?"));
