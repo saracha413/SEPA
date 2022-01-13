@@ -1,6 +1,6 @@
 /*
 G. Goebel and S. Streeter
-1/12/2022
+January 2022
 
 This sketch is for Lesson 3, Recording Data Over Time.
 The sketch is setup for one sensor (either an Adafruit
@@ -66,13 +66,13 @@ GND  <--> GND
 //-----------------------------------------------------------------------
 
 // SET THE DELAY TIME BETWEEN MEAUREMENTS HERE
-int DelayTime = 3; // In units of seconds
+int DelayTime = 1; // In units of seconds
 
 //-----------------------------------------------------------------------
 
 // SETUP FOR SD CARD
 File outputfile;
-String fileName = "output.csv";
+String fileName = "output_0.csv";
 
 // SETUP FOR LIGHT SENSOR
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // Pass sensor ID number (for your use later)
@@ -142,11 +142,24 @@ void setup() {
 
   // Connect to any other sensors here
 
-  // See if old output data file exists, delete it if it does
-  if (SD.exists(fileName)){
-    Serial.println(fileName+" exists, deleting and starting new");
-    SD.remove(fileName);
+//  // See if old output data file exists, delete it if it does
+//  if (SD.exists(fileName)){
+//    Serial.println(fileName+" exists, deleting and starting new");
+//    SD.remove(fileName);
+//  }
+  
+  // Check whether output file(s) already exist. If they do, continue with 
+  // increased x, where the filename is output_x.csv. This way, no data files
+  // are ever accidentally overwritten.
+  while (SD.exists(fileName)){
+    Serial.println("File " + fileName + " exists");
+    int idx       = fileName.indexOf("_");                                 // Locate the underscore
+    int OldNumber = fileName.substring(idx+1,fileName.length()-4).toInt(); // Grab last file number
+    int NewNumber = OldNumber + 1;                                         // Increment file number by 1
+    fileName.remove(idx+1, fileName.length()-1);                           // Remove old number from string
+    fileName = fileName + NewNumber + ".csv";                              // Add new number to string
   }
+  Serial.println("Saving data with filename " + fileName);
 
   // Print column headers in new output file
   outputfile = SD.open(fileName, FILE_WRITE);
