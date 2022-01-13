@@ -1,3 +1,6 @@
+#include <DHT.h>
+#include <DHT_U.h>
+
 /* DHT11 Temperature and Humidity Sensor */
 
 #include <DHT.h>
@@ -16,16 +19,8 @@ void setup(void)
   // This line is needed to send text from the microcontroller to the computer.
   Serial.begin(9600);
   
-  // This section turns on the sensor, and notifies user if it cannot find the sensor.
-  if (dht.begin()) 
-  {
-    Serial.println(F("Found a DHT sensor"));
-  } 
-  else 
-  {
-    Serial.println(F("No sensor found ... check your wiring?"));
-    while (1);
-  }
+  // This section turns on the sensor
+   dht.begin();
 }
 
 // Code in the loop block is run repeatedly until the device is powered off 
@@ -35,16 +30,21 @@ void loop(void)
   float h = dht.readHumidity();
   float t = dht.readTemperature();
 
-  // These lines format the text with the measurement that will go to the computer.
-  String measName = "Air Temperature (C), ";
-  String trailingComma = ", ";
-  String output = measName + t + trailingComma;
+  // Check if any reads failed and exit early (to try again).
+          if (isnan(h) || isnan(t)) {
+            Serial.println(F("Failed to read from DHT sensor!"));
+            return;
+          }
 
-  String measName = "Humidity (%), ";
+  // These lines format the text with the measurement that will go to the computer.
+  String measNameT = "Air Temperature (C), ";
   String trailingComma = ", ";
+  String output = measNameT + t + trailingComma;
+
+  String measNameH = "Humidity (%), ";
   // Compare with above, the output string has already been created
   // (in line 41). Now we are just adding the additional measurement to it
-  output = output + measName + h + trailingComma;
+  output = output + measNameH + h + trailingComma;
   
   // This line sends the text with the measurement to the computer.
   Serial.println(output);
