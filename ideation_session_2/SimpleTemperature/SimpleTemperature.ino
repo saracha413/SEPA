@@ -25,6 +25,7 @@ void setup(void)
 void loop(void) 
 { 
   // These lines collect a measurement
+  sensors.requestTemperatures();
   float t = sensors.getTempCByIndex(0);
 
   // Check if any reads failed and exit early (to try again).
