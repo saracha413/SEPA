@@ -4,17 +4,6 @@ Created on Wed Dec  1 20:39:43 2021
 
 @author: samue
 
-To make this Python script into an executable, ensure that the PyInstaller 
-package is installed in your working Python environment and use the following:
-    pyinstaller SEPA_TimeLapseTool.py
-    
-To create the executable, use this command in the Anaconda prompt with the 
-appropriate virtual environment activated:
-    pyinstaller --noconfirm --onefile --splash SEPA_SplashScreen.png -i D_Pine_CMYK.ico --name SEPA_TimeLapse_Tool SEPA_TimeLapseTool.py
-    
-See here for more options:
-    https://pyinstaller.readthedocs.io/en/stable/usage.html
-
 """
 
 import numpy as np
@@ -47,7 +36,7 @@ print('        |             )     "=.       .,   \        From the Natl. Inst. 
 print('       /             (         \     /  \  /        Within the National Institutes of Health')
 print("     /`               `\        |   /    `'         https://sepa.host.dartmouth.edu/  ")
 print("     '..-`\        _.-. `\ _.__/   .=.              2021-2022 Academic Year")
-print("          |  _    / \  '.-`    `-.'  /              Created by S. Streeter, December 2021")
+print("          |  _    / \  '.-`    `-.'  /              Created by S. Streeter, March 2022")
 print("          \_/ |  |   './ _     _  \.'                 ")
 print("               '-'    | /       \ |                   ")
 print('                      |  .-. .-.  |                 "IMAGES ARE MORE THAN PICTURES, THEY ARE DATA"')
@@ -73,14 +62,13 @@ try:
 except:
     pass
         
-print('Press ENTER to continue...')
-sys.stdout.flush()
+print('Press ENTER to continue...',end='')
 junk = input()
+sys.stdout.flush()
 
 # Create interactive window for selecting image files
 while True:
-    print('Use the separate window to select the folder that contains your time-lapse images (example images')
-    print('are found in ./Examples/Example_Image_Data/)...')
+    print('Use the separate window to select the folder that contains your time-lapse images (example images are found in ./Examples/Example_Image_Data/)...')
     
     root = Tk()     # pointing root to Tk() to use it as Tk() in program.
     root.withdraw() # Hides small tkinter window.
@@ -89,19 +77,19 @@ while True:
     print('Looking for images in %s...'%path_in)
     
     # Have user confirm image file extension
-    ext = input('Type the image file extension (excluding the period symbol, lower/upper case does not matter) and\nhit ENTER: ')    
+    ext = input('Type the image file extension (excluding the period symbol, lower/upper case does not matter) and hit ENTER: ')    
     
     # Grab zee image files
     Images = glob.glob('%s*.%s'%(path_in,ext))
     N = len(Images)
     if N == 0:
         print('No image files found. Double check selected path and/or image file extension!')
-        print('Press ENTER to start again...')
+        print('Press ENTER to start again...',end='')
         junk = input()
     else:
         break
 
-print('%i total .%s images found...'%(N,ext))
+print('%i total .%s images found.'%(N,ext))
 
 # Automatically create output subfolder
 path_out = '%sSorted_Images/'%(path_in)
@@ -112,8 +100,13 @@ if not isExist:
 # Scrub timestamps from images, copy images, relabel them with timestamps 
 ts = np.array([])
 for i in range(N):
-    year, month, day, hour, minute, second = re.split(' |:', Image.open(Images[i])._getexif()[36867])
-    ts = np.append(ts,datetime(int(year),int(month),int(day),int(hour),int(minute),int(second)))
+    try: # First, try to use image metadata to get timestamp
+        year, month, day, hour, minute, second = re.split(' |:', Image.open(Images[i])._getexif()[36867])
+        ts = np.append(ts,datetime(int(year),int(month),int(day),int(hour),int(minute),int(second)))
+    except: # However, for the Arduino camera solution, you will have to use filename for Unix timestamp
+        tt      = int(Images[i].split('.')[0].split('\\')[1])
+        ttt     = time.time() - time.time()%100000000 + tt
+        ts = np.append(ts,datetime.fromtimestamp(ttt))
 enum_ts = enumerate(ts)
 sorted_enum = sorted(enum_ts, key=operator.itemgetter(1))
 print('Copying and renaming all images...',end='')
@@ -124,27 +117,18 @@ sorted_ts  = []
 for index, element in sorted_enum:
     sorted_idx.append(index)
     sorted_ts.append(element)
-    print('%03i%% complete'%round(cnt/N*100),end='')
+    #print('%03i%% complete'%round(cnt/N*100),end='')
     fn_in  = Images[index]
     # fn_out = '%s%s.%s'%(path_out,element.strftime("%Y-%m-%d %H.%M.%S"),ext)
     fn_out = '%s%s.%s'%(path_out,round(time.mktime(element.timetuple())),ext)    
     labeled_images.append(fn_out)
     shutil.copy(fn_in, fn_out)
     cnt = cnt + 1
-    print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
-    sys.stdout.flush()
-    
-    # DELETE
-    # REMOVE ALL IMAGES AFTER CERTAIN IMAGE
-    # shutil.copy(fn_in, './Images/A/')
-    # if cnt == 350:
-    #     sys.exit()
-    # # ONLY KEEP ONE IMAGE EVERY FIVE
-    # if cnt % 5 == 0:
-    #     shutil.copy(fn_in, './Images/A/')
-    # # DELETE
-print('%03i%% complete'%round(cnt/N*100),end='')
-print('')
+    #print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
+    #sys.stdout.flush()
+# print('%03i%% complete'%round(cnt/N*100),end='')
+# print('')
+print('Done.')
 
 #------------------------------------------------------------------------------
 
@@ -155,48 +139,50 @@ height, width, channels = np.shape(I)
 data = np.empty([N,height,width,channels],dtype=np.uint8)
 cnt = 0
 for i in range(N):
-    print('%03i%% complete'%round(cnt/N*100),end='')
+    #print('%03i%% complete'%round(cnt/N*100),end='')
     data[i] = cv2.imread(labeled_images[i])
     cnt = cnt + 1
-    print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
-    sys.stdout.flush()
-print('%03i%% complete'%round(cnt/N*100),end='')
-print('')
+    #print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
+    #sys.stdout.flush()
+#print('%03i%% complete'%round(cnt/N*100),end='')
+#print('')
+print('Done.')
 
 #------------------------------------------------------------------------------
 
-# Correct barrel lens distortion 
-print('Minimizing lens distortion...',end='')
-# REFERENCE THIS: https://stackoverflow.com/questions/26602981/correct-barrel-distortion-in-opencv-manually-without-chessboard-image
-# I = data_all[0,:,:,:]
-distCoeff = np.zeros((4,1),np.float64)
-k1 = -1.0e-7; # negative to remove barrel distortion
-k2 = -2.0e-10;
-p1 = 0;
-p2 = 0;
-distCoeff[0,0] = k1;
-distCoeff[1,0] = k2;
-distCoeff[2,0] = p1;
-distCoeff[3,0] = p2;
-cam = np.eye(3,dtype=np.float32)
-cam[0,2] = width/2.0  # define center x
-cam[1,2] = height/2.0 # define center y
-cam[0,0] = 10.        # define focal length x
-cam[1,1] = 10.        # define focal length y
-# dst = cv2.undistort(I,cam,distCoeff)
-# plt.figure(1)
-# plt.imshow(I)
-# plt.figure(2)
-# plt.imshow(dst)
-cnt = 0
-for i in range(N):
-    print('%03i%% complete'%round(cnt/N*100),end='')
-    data[i,:,:,:] = cv2.undistort(data[i,:,:,:],cam,distCoeff)
-    cnt = cnt + 1
-    print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
-    sys.stdout.flush()
-print('%03i%% complete'%round(cnt/N*100),end='')
-print('')
+## Correct barrel lens distortion 
+#print('Minimizing lens distortion...',end='')
+## REFERENCE THIS: https://stackoverflow.com/questions/26602981/correct-barrel-distortion-in-opencv-manually-without-chessboard-image
+## I = data_all[0,:,:,:]
+#distCoeff = np.zeros((4,1),np.float64)
+#k1 = -1.0e-7; # negative to remove barrel distortion
+#k2 = -2.0e-10;
+#p1 = 0;
+#p2 = 0;
+#distCoeff[0,0] = k1;
+#distCoeff[1,0] = k2;
+#distCoeff[2,0] = p1;
+#distCoeff[3,0] = p2;
+#cam = np.eye(3,dtype=np.float32)
+#cam[0,2] = width/2.0  # define center x
+#cam[1,2] = height/2.0 # define center y
+#cam[0,0] = 10.        # define focal length x
+#cam[1,1] = 10.        # define focal length y
+## dst = cv2.undistort(I,cam,distCoeff)
+## plt.figure(1)
+## plt.imshow(I)
+## plt.figure(2)
+## plt.imshow(dst)
+#cnt = 0
+#for i in range(N):
+#    #print('%03i%% complete'%round(cnt/N*100),end='')
+#    data[i,:,:,:] = cv2.undistort(data[i,:,:,:],cam,distCoeff)
+#    cnt = cnt + 1
+#    #print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
+#    #sys.stdout.flush()
+##print('%03i%% complete'%round(cnt/N*100),end='')
+##print('')
+#print('Done.')
 
 #------------------------------------------------------------------------------
 
@@ -215,7 +201,7 @@ if response.lower() == 'y' or response.lower() == 'yes':
     print('Labeling image data...',end='')
     cnt = 0
     for i in range(N):
-        print('%03i%% complete'%round(cnt/N*100),end='')
+        #print('%03i%% complete'%round(cnt/N*100),end='')
         ts_now = '%s'%sorted_ts[i]
         str_now = 'Frame %i of %i   %s'%(i+1,N,ts_now)
         text_size, _ = cv2.getTextSize(str_now, cv2.FONT_HERSHEY_DUPLEX, 3, 10)
@@ -225,10 +211,11 @@ if response.lower() == 'y' or response.lower() == 'yes':
                     fontScale=3,color=(255,255,255),thickness=2,lineType=cv2.LINE_4,bottomLeftOrigin=False);   
         cv2.imwrite(labeled_images[i],data[i])
         cnt = cnt + 1
-        print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
-        sys.stdout.flush()
-    print('%03i%% complete'%round(cnt/N*100),end='')
-    print('')
+        #print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
+        #sys.stdout.flush()
+    #print('%03i%% complete'%round(cnt/N*100),end='')
+    #print('')
+    print('Done.')
 
 #------------------------------------------------------------------------------
 
@@ -258,79 +245,64 @@ if response.lower() == 'y' or response.lower() == 'yes':
     out = cv2.VideoWriter('%sTime_Lapse.mp4'%path_out2,cv2.VideoWriter_fourcc(*'mp4v'), fps, size)
     cnt = 0
     for i in range(N):
-        print('%03i%% complete'%round(cnt/N*100),end='')
+        #print('%03i%% complete'%round(cnt/N*100),end='')
         out.write(data[i])
         cnt = cnt + 1
-        print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
-        sys.stdout.flush()
+        #print('\b\b\b\b\b\b\b\b\b\b\b\b\b',end='')
+        #sys.stdout.flush()
     out.release()
-    print('%03i%% complete'%round(cnt/N*100),end='')
+    #print('%03i%% complete'%round(cnt/N*100),end='')
+    #print('')
+    print('Done.')
     print('')
 
 #------------------------------------------------------------------------------
 
-# Free up 
-#------------------------------------------------------------------------------
 print('||-------------------------------------------------------------------------------------------------||')
 print('')
 print('Time to setup ImageJ. Hit ENTER after each step is complete to continue...')
 print('')
-print('   1.  Start ImageJ by double-clicking on ImageJ.exe (found in ImageJ subfolder).')
-print('')
+print('   1.  Start ImageJ by double-clicking on ImageJ.exe (found in ImageJ subfolder).',end='')
 junk = input()
-print('   2.  In the ImageJ interface, select File-->Import-->Image Sequence...')
-print('')
+print('   2.  In the ImageJ interface, select File-->Import-->Image Sequence...',end='')
 junk = input()
-print('   3.  Browse to the folder containing your images and select the Sorted_Images subfolder.')
-print('')
+print('   3.  Browse to the folder containing your images and select the Sorted_Images subfolder.',end='')
 junk = input()
 print('   4.  Hit OK. It may take a moment to load all the images (note the progress bar along the bottom')
-print('       of ImageJ interface window).')
-print('')
+print('       of ImageJ interface window).',end='')
 junk = input()
 print('||-------------------------------------------------------------------------------------------------||')
 print('')
 print('The first step is to determine the spatial scale of the time-lapse images. To do this, we will')
 print('need to measure the 1cm horizontal and/or vertical grid lines in the background.')
 print('')
-print('   1.  Select the STRAIGHT LINE drawing tool from the ImageJ menu bar.')
-print('')
+print('   1.  Select the STRAIGHT LINE drawing tool from the ImageJ menu bar.',end='')
 junk = input()
-print('   2.  Click and drag along the length of one square in the background grid pattern.')
-print('')
+print('   2.  Click and drag along the length of one square in the background grid pattern.',end='')
 junk = input()
 print('   3.  Release the mouse button and hit CTRL+m. A Results table should appear containing the')
-print('       measurement.')
-print('')
+print('       measurement.',end='')
 junk = input()
 print('   4.  Repeat steps 2 and 3 four or five times measuring vertical and horizontal grid squares in')
-print('       different places.')
-print('')
+print('       different places.',end='')
 junk = input()
-print('   5.  In the Results table window, in the menu bar, select Results-->Summarize.')
-print('')
+print('   5.  In the Results table window, in the menu bar, select Results-->Summarize.',end='')
 junk = input()
 print('   6.  In the Results table, in the row titled "Mean," take note of the LAST value in the rightmost')
-print('       colummn titled "Length". (You will need this number in the next step.)')
-print('')
+print('       column titled "Length". (You will need this number in the next step.)',end='')
 junk = input()
-print('   7.  In the main ImageJ interface menu bar, select Analyze-->Set Scale...')
-print('')
+print('   7.  In the main ImageJ interface menu bar, select Analyze-->Set Scale...',end='')
 junk = input()
-print('   8.  Input the mean length from step 6 in the "Distance in pixels" box.')
-print('')
+print('   8.  Input the mean length from step 6 in the "Distance in pixels" box.',end='')
 junk = input()
-print('   9.  Input the number "1" in the "Known distance" box.')
-print('')
+print('   9.  Input the number "1" in the "Known distance" box.',end='')
 junk = input()
-print('   10. Input "cm" in the "Unit of length" box.')
-print('')
+print('   10. Input "cm" in the "Unit of length" box.',end='')
 junk = input()
-print('   11. Make sure that the "Global" box is checked.')
-print('')
+print('   11. Make sure that the "Global" box is checked.',end='')
 junk = input()
-print('   12. Hit OK in the Set Scale window. Now the images are in units of cm!')
-print('')
+print('   12. Hit OK in the Set Scale window. Now the images are in units of cm!',end='')
+junk = input()
 
 #------------------------------------------------------------------------------
 print('||-------------------------------------------------------------------------------------------------||')
@@ -338,33 +310,26 @@ print('')
 print('Time to perform ImageJ measurements. Hit ENTER after each step is complete to continue...')
 print('')
 print('   1.  In the Results table window menu bar, select Results-->Clear Results. Choose to not save the')
-print('       results.')
-print('')
+print('       results.',end='')
 junk = input()
 print('   2.  In the main ImageJ interface window, click and hold the STRAIGHT LINE drawing tool button.')
-print('       Select the SEGMENTED LINE option from the dropdown.')
-print('')
+print('       Select the SEGMENTED LINE option from the dropdown.',end='')
 junk = input()
 print('   3.  Using the slider bar at the bottom of the ImageJ image stack window, inspect the time-lapse')
 print('       images. Focus on a SINGLE seedling/plant. What we need to do is measure the length of your')
-print('       target seedling/plant at different time points.')
-print('')
+print('       target seedling/plant at different time points.',end='')
 junk = input()
 print('   4.  When you wish to take a measurement, starting at the base of a plant, repeatedly LEFT click')
 print('       to trace the length of the plant. The last tracing click must be a RIGHT click. This ends')
-print('       the tracing. Hit CTRL+m to record the measurement.')
-print('')
+print('       the tracing. Hit CTRL+m to record the measurement.',end='')
 junk = input()
-print('   5.  Left click once anywhere in the image window to clear the previous selection.')
-print('')
+print('   5.  Left click once anywhere in the image window to clear the previous selection.',end='')
 junk = input()
-print('   6.  Repeat steps 4 and 5 for several images at different points in time.')
-print('')
+print('   6.  Repeat steps 4 and 5 for several images at different points in time.',end='')
 junk = input()
 print('   7.  When you are done, in the Results table window, select File-->Save As. Adjust the file name')
 print('       so that it notes your name and/or the seedling you measured. For example, "Results_Sam.csv"')
-print('       or "Results_Sam_Seedling1.csv". The file will be saved in the Sorted_Images subfolder')
-print('')
+print('       or "Results_Sam_Seedling1.csv". The file will be saved in the Sorted_Images subfolder',end='')
 junk = input()
 
 #------------------------------------------------------------------------------
@@ -375,8 +340,9 @@ root = Tk()     # pointing root to Tk() to use it as Tk() in program.
 root.withdraw() # Hides small tkinter window.
 root.attributes('-topmost', True)         # Opened windows will be active. above all windows despite of selection.
 file_in = '%s'%filedialog.askopenfilename(initialdir=os.getcwd()) # Returns filename
-print('Loading tabulated measurements...')
+print('Loading tabulated measurements...',end='')
 data = pd.read_csv(file_in)
+print('Done.')
 print(data)
 
 # Sort the data such that the measurements are in chronological order - doing 
@@ -393,7 +359,7 @@ data = data.sort_values('Label',ascending=True)
 #     response = input('Would you like to label daylight hours in your plots (y/n)? ') 
 response = 'n'
 
-print('Generating plots...')
+print('Generating plots...',end='')
 sys.stdout.flush()
 
 # Convert timestamps of measurements
@@ -586,7 +552,8 @@ if response.lower() == 'y' or response.lower() == 'yes':
 plt.draw()
 plt.savefig("%sPlant_HWratio.tif"%path_out, dpi=200, facecolor='w', edgecolor='w',bbox_inches='tight')
 
-print('Close all figure windows when done inspecting measurements...')
+print('Done.')
+print('Close all figure windows when done inspecting measurements...',end='')
 sys.stdout.flush()
 plt.show()
 
@@ -599,12 +566,11 @@ print('')
 print("      _.-'''''-._")
 print("    .'  _     _  '.")
 print("   /   (o)   (o)   \\  CONGRATULATIONS! You have completed the SEPA Time-Lapse Tool exercise.")
-print("  |                 | Hit ENTER to end the program.")
+print("  |                 | ")
 print("  |  \           /  |")
 print("   \  '.       .'  /")
 print("    '.  `'---'`  .'")
 print("jgs   '-._____.-'")
-sys.stdout.flush()
-junk = input()
+
 
 #------------------------------------------------------------------------------
