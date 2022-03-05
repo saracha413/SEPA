@@ -23,6 +23,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from PyQt5 import QtGui
+import copy
 
 # Print fun command line header
 print('                                      _.--"""--,    ')
@@ -81,7 +82,17 @@ while True:
     
     # Grab zee image files
     Images = glob.glob('%s*.%s'%(path_in,ext))
-    N = len(Images)
+    
+    # Before loading image data, find and remove any empty image files
+    # (These happen when the Arduino program is trying to save an image when the SD
+    # card is removed or if the sketch is restarted at an unlucky moment in time.)
+    Images2 = copy.deepcopy(Images)
+    cnt = 0
+    for i in range(np.shape(Images)[0]):
+        if os.path.getsize(Images[i]) < 5000:
+            del(Images2[i-cnt])
+            cnt = cnt + 1
+    N = np.shape(Images2)[0]
     if N == 0:
         print('No image files found. Double check selected path and/or image file extension!')
         print('Press ENTER to start again...',end='')
@@ -89,7 +100,7 @@ while True:
     else:
         break
 
-print('%i total .%s images found.'%(N,ext))
+print('%i total .%s images found. (Another %i images were empty and thus omitted.)'%(N,ext,cnt))
 
 # Automatically create output subfolder
 path_out = '%sSorted_Images/'%(path_in)
@@ -101,10 +112,10 @@ if not isExist:
 ts = np.array([])
 for i in range(N):
     try: # First, try to use image metadata to get timestamp
-        year, month, day, hour, minute, second = re.split(' |:', Image.open(Images[i])._getexif()[36867])
+        year, month, day, hour, minute, second = re.split(' |:', Image.open(Images2[i])._getexif()[36867])
         ts = np.append(ts,datetime(int(year),int(month),int(day),int(hour),int(minute),int(second)))
     except: # However, for the Arduino camera solution, you will have to use filename for Unix timestamp
-        tt      = int(Images[i].split('.')[0].split('\\')[1])
+        tt      = int(Images2[i].split('.')[0].split('\\')[1])
         ttt     = time.time() - time.time()%100000000 + tt
         ts = np.append(ts,datetime.fromtimestamp(ttt))
 enum_ts = enumerate(ts)
@@ -118,7 +129,7 @@ for index, element in sorted_enum:
     sorted_idx.append(index)
     sorted_ts.append(element)
     #print('%03i%% complete'%round(cnt/N*100),end='')
-    fn_in  = Images[index]
+    fn_in  = Images2[index]
     # fn_out = '%s%s.%s'%(path_out,element.strftime("%Y-%m-%d %H.%M.%S"),ext)
     fn_out = '%s%s.%s'%(path_out,round(time.mktime(element.timetuple())),ext)    
     labeled_images.append(fn_out)
