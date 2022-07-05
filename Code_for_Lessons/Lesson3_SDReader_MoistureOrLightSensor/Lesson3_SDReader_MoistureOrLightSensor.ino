@@ -72,7 +72,7 @@ int DelayTime = 1; // In units of seconds
 
 // SETUP FOR SD CARD
 File outputfile;
-String fileName = "output_0.csv";
+String fileName = "F_0.csv";
 
 // SETUP FOR LIGHT SENSOR
 Adafruit_TSL2591 tsl = Adafruit_TSL2591(2591); // Pass sensor ID number (for your use later)
